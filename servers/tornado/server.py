@@ -1,19 +1,27 @@
 #!/usr/bin/env python
 #coding:utf-8
 
+import os.path
+import sys
+
+# для того, чтобы был виден модуль settings.py
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+)
+
 from collections import defaultdict
+
 from tornado.escape import json_decode
 from tornado.ioloop import IOLoop
 from tornado.ioloop import PeriodicCallback
-from tornado.web import asynchronous, RequestHandler, Application
+from tornado.web import asynchronous
+from tornado.web import RequestHandler
+from tornado.web import Application
 
-# Адрес сервера
-SERVER_ADDRESS = '127.0.0.1'
-
-# Порт сервера
-SERVER_PORT = 8080
-
-SERVER_FULL_ADDRES = r"http://%s:%d" % (SERVER_ADDRESS, SERVER_PORT)
+from settings import SERVER_ADDRESS
+from settings import SERVER_PORT
+from settings import SERVER_FULL_ADDRES
+from settings import TORNADO_SERVER
 
 
 class CounterStorage(object):
@@ -29,7 +37,7 @@ class CounterStorage(object):
 
     @classmethod
     def get_all_request_info(cls):
-        # статситика всех запросов
+        # статистика всех запросов
         return cls._req_storage
 
     @classmethod
@@ -109,13 +117,23 @@ class StatHandler(RequestHandler):
         self.finish()
 
 
+class ServerTypeHandler(BaseHandler):
+
+    u"""Класс обработчика запроса типа сервера."""
+
+    @asynchronous
+    def post(self):
+        self.write({'server_type': TORNADO_SERVER, 'status': 'ok'})
+        self.finish()
+
 if __name__ == "__main__":
 
     application = Application([
         (r"/", MainPageHandler),
         (r"/async_ping", AsyncPingHandler),
         (r"/sync_ping", SyncPingHandler),
-        (r"/stat", StatHandler)
+        (r"/stat", StatHandler),
+        (r"/type", ServerTypeHandler)
     ], debug=True)
 
     application.listen(address=SERVER_ADDRESS, port=SERVER_PORT)
@@ -124,6 +142,6 @@ if __name__ == "__main__":
     # периодическая задача (3 мин) сброса статистики
     PeriodicCallback(CounterStorage.clean, 3 * 60 * 1000).start()
 
-    print "*** DEMOSERVER STARTED ON %s ***" % SERVER_FULL_ADDRES
+    print "*** TORNADO DEMOSERVER STARTED ON %s ***" % SERVER_FULL_ADDRES
 
     main_loop.start()
